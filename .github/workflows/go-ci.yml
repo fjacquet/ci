@@ -1,0 +1,32 @@
+name: go-ci
+on:
+  workflow_call:
+    inputs:
+      go-version: { type: string, default: "" }
+    secrets:
+      CODECOV_TOKEN: { required: false }
+permissions:
+  contents: read
+concurrency:
+  group: go-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ci:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with: { egress-policy: audit }
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with: { persist-credentials: false }
+      - uses: fjacquet/ci/actions/setup-go-cache@v1
+        with: { go-version: "${{ inputs.go-version }}" }
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0   # for uvx semgrep/codecov in make targets
+      - run: make tools
+      - run: make ci
+      - run: make sbom
+      - run: make coverage-upload
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

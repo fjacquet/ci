@@ -1,5 +1,10 @@
 # zizmor.yml — only allow actions from trusted orgs; everything must be SHA-pinned (enforced by pinact)
 rules:
+  unpinned-uses:
+    config:
+      policies:
+        fjacquet/*: ref-pin   # first-party — tag-pinned intentionally, SHA-pinning is not supported for same-repo refs
+        "*": hash-pin
   forbidden-uses:
     config:
       allow:
