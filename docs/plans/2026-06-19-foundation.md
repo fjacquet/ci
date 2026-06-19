@@ -37,9 +37,10 @@ Copied verbatim from `DESIGN.md`; every task implicitly includes these.
 - **Standard Validation Cycle (SVC)** — referenced by every authoring task. Run from `~/Projects/ci`:
   1. `actionlint` — Expected: no output (exit 0). Lints all `.github/workflows/*.yml`.
   2. `uvx zizmor --format=plain .` — Expected: `No findings` (or only known/allowlisted). Audits workflows + `action.yml` + `dependabot.yml`.
-  3. `pinact run` then `pinact run --check` — first pins tags→SHAs, second Expected: exit 0 (everything pinned).
+  3. `export GITHUB_TOKEN=$(gh auth token)` (pinact needs API auth to resolve tags→SHAs), then `pinact run --exclude '^fjacquet/'` to pin third-party tags→SHAs, then `pinact run --check --exclude '^fjacquet/'` — Expected: exit 0. First-party `fjacquet/ci/...@v1` refs are intentionally tag-pinned per the pinning policy and excluded from SHA-pinning.
   Composite `action.yml` files are linted by `zizmor` (actionlint does not parse them); their behavioural test is the pilot run that consumes them.
 - **Tooling install (Task 2 sets these up; assume present thereafter):** `brew install actionlint pinact` ; `zizmor` runs via `uvx zizmor` (no install). `gh` CLI authenticated as `fjacquet`.
+- **Branch strategy (execution):** all authoring tasks (1–16) commit to a single `ci-foundation` branch off `main`. Ignore any per-task `git checkout -b <name>` command in individual task text — those are superseded by this single-branch strategy. Pilot tasks (17–20) branch inside their own target repos as written.
 
 ---
 
