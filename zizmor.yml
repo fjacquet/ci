@@ -1,0 +1,17 @@
+# zizmor.yml — only allow actions from trusted orgs; everything must be SHA-pinned (enforced by pinact)
+rules:
+  forbidden-uses:
+    config:
+      allow:
+        - actions/*
+        - github/codeql-action/*
+        - astral-sh/*
+        - golangci/*
+        - goreleaser/*
+        - codecov/*
+        - docker/*
+        - google/osv-scanner-action/*
+        - aquasecurity/*
+        - anchore/*
+        - step-security/*
+        - fjacquet/*
