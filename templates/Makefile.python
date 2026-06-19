@@ -41,7 +41,7 @@ docs:
 	uv run mkdocs build --strict --site-dir site
 
 coverage-upload:
-	uvx codecov-cli upload-process --file coverage.xml || true
+	uvx --from codecov-cli codecov upload-process --file coverage.xml || true
 
 release:
 	uv build
