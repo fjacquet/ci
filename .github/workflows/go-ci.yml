@@ -21,9 +21,9 @@ jobs:
         with: { egress-policy: audit }
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with: { persist-credentials: false }
-      - uses: fjacquet/ci/actions/setup-go-cache@v1
+      - uses: fjacquet/ci/actions/setup-go-cache@v1 # nosemgrep: github-actions.security.third-party-action-not-pinned-to-commit-sha
         with: { go-version: "${{ inputs.go-version }}" }
-      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0   # for uvx semgrep/codecov in make targets
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0 — for uvx semgrep/codecov in make targets
       - run: make tools
       - run: make ci
       - run: make sbom
