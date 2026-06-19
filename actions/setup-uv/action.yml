@@ -1,0 +1,16 @@
+name: setup-uv
+description: Set up Python and uv with caching
+inputs:
+  python-version:
+    default: "3.13"
+  enable-cache:
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      with:
+        python-version: ${{ inputs.python-version }}
+    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      with:
+        enable-cache: ${{ inputs.enable-cache }}

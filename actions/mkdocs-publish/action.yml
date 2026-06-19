@@ -1,0 +1,39 @@
+name: mkdocs-publish
+description: Build an mkdocs-material site and upload it as a GitHub Pages artifact
+inputs:
+  python-version:
+    default: "3.13"
+  project-install:
+    description: "true to run 'uv sync' (docs need the package/plugins); false for lightweight uvx"
+    default: "false"
+  uvx-with:
+    description: Space-separated extra packages for uvx mode
+    default: "mkdocs-material pymdown-extensions"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      with:
+        python-version: ${{ inputs.python-version }}
+    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      with:
+        enable-cache: ${{ inputs.project-install }}
+    - name: Build (uv sync)
+      if: ${{ inputs.project-install == 'true' }}
+      shell: bash
+      run: |
+        uv sync --all-extras --all-groups
+        uv run mkdocs build --strict --site-dir site
+    - name: Build (uvx)
+      if: ${{ inputs.project-install == 'false' }}
+      shell: bash
+      env:
+        UVX_WITH: ${{ inputs.uvx-with }}
+      run: |
+        WITH=""
+        for p in $UVX_WITH; do WITH="$WITH --with $p"; done
+        uvx $WITH mkdocs build --strict --site-dir site
+    - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+    - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      with:
+        path: site

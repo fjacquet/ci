@@ -1,0 +1,41 @@
+name: sbom
+description: Generate a CycloneDX SBOM for go, python, or node
+inputs:
+  ecosystem:
+    description: go | python | node
+    required: true
+  output:
+    default: dist/sbom.cdx.json
+runs:
+  using: composite
+  steps:
+    - name: SBOM (go)
+      if: ${{ inputs.ecosystem == 'go' }}
+      shell: bash
+      env:
+        SBOM_OUTPUT: ${{ inputs.output }}
+      run: |
+        mkdir -p "$(dirname "$SBOM_OUTPUT")"
+        go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest \
+          mod -json -output "$SBOM_OUTPUT"
+    - name: SBOM (python)
+      if: ${{ inputs.ecosystem == 'python' }}
+      shell: bash
+      env:
+        SBOM_OUTPUT: ${{ inputs.output }}
+      run: |
+        mkdir -p "$(dirname "$SBOM_OUTPUT")"
+        uv run cyclonedx-py environment --output-format JSON --output-file "$SBOM_OUTPUT"
+    - name: SBOM (node)
+      if: ${{ inputs.ecosystem == 'node' }}
+      shell: bash
+      env:
+        SBOM_OUTPUT: ${{ inputs.output }}
+      run: |
+        mkdir -p "$(dirname "$SBOM_OUTPUT")"
+        npx --yes @cyclonedx/cyclonedx-npm@latest --omit dev \
+          --output-format JSON --output-file "$SBOM_OUTPUT"
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: sbom-${{ inputs.ecosystem }}
+        path: ${{ inputs.output }}
