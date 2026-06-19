@@ -3,6 +3,7 @@
 DIST  ?= dist
 COVER ?= coverage.out
 GOLANGCI_VERSION ?= v2.12.2
+GORELEASER_VERSION ?= v2.16.0
 
 .PHONY: all clean install tools lint format test build vuln sbom security docs coverage-upload release ci
 
@@ -17,6 +18,7 @@ install:
 tools:
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION)
 	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
 
 lint:
 	golangci-lint run --timeout=5m
@@ -44,7 +46,7 @@ docs:
 	uvx --with mkdocs-material --with pymdown-extensions mkdocs build --strict --site-dir site
 
 coverage-upload:
-	uvx codecov-cli upload-process --file $(COVER) || true
+	uvx --from codecov-cli codecov upload-process --file $(COVER) || true
 
 release:
 	goreleaser release --clean
