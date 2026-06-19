@@ -56,6 +56,7 @@ truth, with the **latest builders** and **CI best practices** applied uniformly.
 | D5 | **Security baseline** | Best-of-breed **per archetype**: `go-security` = semgrep + SBOM; `web-py-security` = CodeQL + osv-scanner + SBOM. Both add `harden-runner` | Minimal migration churn; keep what's wired, fix the hygiene. |
 | D6 | **Central repo** | `fjacquet/ci` (dedicated, public) | No community-health side effects; single purpose. |
 | D7 | **Docs tooling** | Standardize on **mkdocs-material**; migrate `para-files` + `pdf2md` off Jekyll | mkdocs already the de-facto standard (20 repos). |
+| D8 | **Build interface** | **Go + Python: pure Makefile.** Reusable workflows call `make <target>` for the entire build (incl. release, coverage, sbom, docs, security). **Frontend: npm-native** (workflows call npm scripts directly). Canonical `Makefile.go`/`Makefile.python` templates in `fjacquet/ci/templates/`; every Go/Py repo exposes the same target set (`all clean install tools lint format test build vuln sbom security docs coverage-upload release ci`). | `make` target names become the standardization contract; `pscale_exporter` already works this way. Frontend keeps npm scripts (idiomatic). See the Makefile amendment plan. |
 
 ## 4. Target architecture
 
