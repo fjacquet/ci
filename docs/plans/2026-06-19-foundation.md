@@ -211,6 +211,15 @@ git add README.md zizmor.yml .gitignore .github/
 git commit -m "chore: scaffold fjacquet/ci (self-check, dependabot, zizmor allowlist)"
 ```
 
+- [ ] **Step 8: Create the public GitHub remote**
+
+```bash
+cd ~/Projects/ci
+gh repo create fjacquet/ci --public --source=. --remote=origin --description "Central reusable CI/CD workflows and composite actions"
+git push -u origin main
+```
+Expected: repo `fjacquet/ci` created and `main` pushed (includes `DESIGN.md`, `docs/`, scaffold). The `self-check` workflow runs on this push — confirm it goes green with `gh run watch`. This is also the first real end-to-end test of `actionlint` + `zizmor` + `pinact --check` in CI.
+
 ---
 
 ## Task 3: Composite action — `harden`
