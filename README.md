@@ -16,32 +16,53 @@ Central repository of reusable GitHub Actions workflows and composite actions fo
 
 ## Workflows
 
-| Workflow | File | Description | Required caller permissions |
-|----------|------|-------------|------------------------------|
-| self-check | `.github/workflows/self-check.yml` | Runs actionlint + zizmor + pinact on this repo | `contents: read` |
-| ci-node | _coming in Task 8_ | Node.js lint, test, build | `contents: read` |
-| ci-python | _coming in Task 9_ | Python lint, test, coverage | `contents: read` |
-| ci-go | _coming in Task 10_ | Go vet, test, build | `contents: read` |
-| ci-docker | _coming in Task 11_ | Docker build + push to GHCR | `contents: read`, `packages: write` |
-| release | _coming in Task 12_ | Semantic release + changelog | `contents: write`, `id-token: write` |
-| codeql | _coming in Task 13_ | CodeQL SAST scan | `contents: read`, `security-events: write` |
-| osv-scan | _coming in Task 14_ | OSV dependency scan | `contents: read`, `security-events: write` |
-| pages | _coming in Task 15_ | Deploy static site to GitHub Pages | `contents: read`, `pages: write`, `id-token: write` |
+| Workflow | File | Purpose | Required caller permissions | Optional secrets |
+|----------|------|---------|------------------------------|-----------------|
+| go-ci | `.github/workflows/go-ci.yml` | Go lint, test, build, SBOM, coverage upload | `contents: read` | `CODECOV_TOKEN` |
+| go-security | `.github/workflows/go-security.yml` | Go semgrep security scan | `contents: read` | — |
+| go-release | `.github/workflows/go-release.yml` | GoReleaser cross-platform release + GHCR push | `contents: write`, `packages: write`, `id-token: write` | `HOMEBREW_TAP_GITHUB_TOKEN` |
+| python-ci | `.github/workflows/python-ci.yml` | Python lint, test, build, SBOM, coverage upload | `contents: read` | `CODECOV_TOKEN` |
+| python-security | `.github/workflows/python-security.yml` | Python semgrep + OSV vulnerability scan | `contents: read` | — |
+| python-release | `.github/workflows/python-release.yml` | uv build + PyPI trusted publishing | `contents: read`, `id-token: write` | — |
+| web-ci | `.github/workflows/web-ci.yml` | Node.js typecheck, lint, test, build | `contents: read` | — |
+| web-deploy | `.github/workflows/web-deploy.yml` | Node.js build + deploy to GitHub Pages | `contents: read` (build job), `pages: write`, `id-token: write` (deploy job) | — |
+| web-security | `.github/workflows/web-security.yml` | CodeQL SAST + OSV scan + SBOM for JS/TS | `contents: read`, `security-events: write`, `actions: read` | — |
+| docs-publish | `.github/workflows/docs-publish.yml` | MkDocs build + deploy to GitHub Pages | `contents: read` (build job), `pages: write`, `id-token: write` (deploy job) | — |
+
+## Consumer requirements
+
+### Go repos
+
+Must expose the canonical Makefile target set from [`templates/Makefile.go`](templates/Makefile.go):
+`all`, `clean`, `install`, `tools`, `lint`, `format`, `test`, `build`, `vuln`, `sbom`, `security`, `docs`, `coverage-upload`, `release`, `ci`.
+
+The `tools` target installs `golangci-lint`, `govulncheck`, and `goreleaser` via `go install`.
+
+### Python repos
+
+Must expose the canonical Makefile target set from [`templates/Makefile.python`](templates/Makefile.python).
+Dev dependencies must include `cyclonedx-py` (for `make sbom`) and `mkdocs-material` (for `make docs`).
+
+### Frontend (web) repos
+
+Stay npm-native — no Makefile required. Scripts `typecheck`, `lint`, `test:run`, and `build` must be defined in `package.json`.
 
 ## Usage example
 
 ```yaml
 # .github/workflows/ci.yml  (in a caller repo)
+name: CI
+on: [push, pull_request]
 jobs:
   ci:
-    uses: fjacquet/ci/.github/workflows/ci-node.yml@v1
+    uses: fjacquet/ci/.github/workflows/go-ci.yml@v1
     permissions:
       contents: read
-    with:
-      node-version: "20"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 ```
 
-Replace `ci-node.yml` with whichever workflow you need and supply its `with:` inputs as documented in the workflow file itself.
+Replace `go-ci.yml` with whichever workflow you need and supply its `with:` inputs and `secrets:` as documented in the workflow file itself.
 
 ## Self-check
 
