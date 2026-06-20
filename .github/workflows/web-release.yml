@@ -94,13 +94,15 @@ jobs:
         run: |
           zip -r "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip" "$BUILD_DIR"
           tar czf "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz" "$BUILD_DIR"
-      - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
-        with:
-          generate_release_notes: true
-          files: |
-            ${{ env.ARCHIVE_NAME }}-${{ github.ref_name }}.zip
-            ${{ env.ARCHIVE_NAME }}-${{ github.ref_name }}.tar.gz
-            sbom.cyclonedx.json
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip" \
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz" \
+            sbom.cyclonedx.json \
+            --generate-notes
 
   # ── npm → GitHub Packages ────────────────────────────────────────────────────
   npm-publish:
