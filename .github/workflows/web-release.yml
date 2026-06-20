@@ -133,6 +133,9 @@ jobs:
           name: dist
           path: ${{ inputs.build-dir }}/
       - name: Publish to GitHub Packages
+        # zizmor: ignore[use-trusted-publishing]
+        # GitHub Packages auth uses NODE_AUTH_TOKEN; npm OIDC trusted
+        # publishing is npmjs.org-only and not applicable here.
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
