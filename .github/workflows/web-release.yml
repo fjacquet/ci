@@ -86,12 +86,19 @@ jobs:
         run: |
           zip -r "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip" "$BUILD_DIR"
           tar czf "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz" "$BUILD_DIR"
-      - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
-        with:
-          generate_release_notes: true
-          files: |
-            ${{ env.ARCHIVE_NAME }}-${{ github.ref_name }}.zip
-            ${{ env.ARCHIVE_NAME }}-${{ github.ref_name }}.tar.gz
+      # Use the runner-provided gh CLI rather than a third-party release action
+      # (org policy: forbidden-uses in zizmor.yml). Upsert so re-runs succeed.
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --generate-notes --verify-tag \
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip" \
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz" \
+          || gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber \
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip" \
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz"
 
   # ── npm → GitHub Packages ────────────────────────────────────────────────────
   npm-publish:
