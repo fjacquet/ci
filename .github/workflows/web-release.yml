@@ -78,20 +78,31 @@ jobs:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: dist
           path: ${{ inputs.build-dir }}/
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
       - name: Create archives
         run: |
           zip -r "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip" "$BUILD_DIR"
           tar czf "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz" "$BUILD_DIR"
-      - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
-        with:
-          generate_release_notes: true
-          files: |
-            ${{ env.ARCHIVE_NAME }}-${{ github.ref_name }}.zip
-            ${{ env.ARCHIVE_NAME }}-${{ github.ref_name }}.tar.gz
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip" \
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz" \
+            sbom.cyclonedx.json \
+            --generate-notes
 
   # ── npm → GitHub Packages ────────────────────────────────────────────────────
   npm-publish:
@@ -122,6 +133,9 @@ jobs:
           name: dist
           path: ${{ inputs.build-dir }}/
       - name: Publish to GitHub Packages
+        # zizmor: ignore[use-trusted-publishing]
+        # GitHub Packages auth uses NODE_AUTH_TOKEN; npm OIDC trusted
+        # publishing is npmjs.org-only and not applicable here.
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
