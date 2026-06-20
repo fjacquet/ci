@@ -37,4 +37,6 @@ jobs:
       - name: pinact check
         run: |
           go install github.com/suzuki-shunsuke/pinact/v4/cmd/pinact@v4.1.0
-          "$(go env GOPATH)/bin/pinact" run --check
+          # Exclude first-party fjacquet/* refs: they are intentionally ref-pinned to the
+          # moving @v1 tag (per the zizmor unpinned-uses policy), not SHA-pinned.
+          "$(go env GOPATH)/bin/pinact" run --check --exclude '^fjacquet/'
