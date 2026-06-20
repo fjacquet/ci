@@ -3,6 +3,10 @@ on:
   workflow_call:
     inputs:
       python-version: { type: string, default: "3.12" }
+      working-directory:
+        description: Directory containing the Python project's Makefile/pyproject (for repos where it is not at the repo root)
+        type: string
+        default: "."
     secrets:
       CODECOV_TOKEN: { required: false }
 permissions:
@@ -16,6 +20,9 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with: { egress-policy: audit }
