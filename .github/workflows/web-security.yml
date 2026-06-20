@@ -1,6 +1,11 @@
 name: web-security
 on:
   workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing the app's package.json (for repos where the JS app is not at the repo root)
+        type: string
+        default: "."
 permissions:
   contents: read
 concurrency:
@@ -48,7 +53,10 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
       - run: npm ci
+        working-directory: ${{ inputs.working-directory }}
       - uses: fjacquet/ci/actions/sbom@v1 # nosemgrep: github-actions.security.third-party-action-not-pinned-to-commit-sha
         with:
           ecosystem: node
+          working-directory: ${{ inputs.working-directory }}

@@ -8,6 +8,10 @@ on:
       package-manager:
         type: string
         default: "npm"
+      working-directory:
+        description: Directory containing the app's package.json (for repos where the JS app is not at the repo root)
+        type: string
+        default: "."
 permissions:
   contents: read
 concurrency:
@@ -19,6 +23,9 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
     env:
       PKG_MGR: ${{ inputs.package-manager }}
     steps:
@@ -32,6 +39,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
       - name: Install
         run: $PKG_MGR ci
       - name: Typecheck
