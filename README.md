@@ -24,6 +24,7 @@ Central repository of reusable GitHub Actions workflows and composite actions fo
 | python-ci | `.github/workflows/python-ci.yml` | Python lint, test, build, SBOM, coverage upload | `contents: read` | `CODECOV_TOKEN` |
 | python-security | `.github/workflows/python-security.yml` | Python semgrep + OSV vulnerability scan | `contents: read` | — |
 | python-release | `.github/workflows/python-release.yml` | uv build + PyPI trusted publishing | `contents: read`, `id-token: write` | — |
+| python-app-release | `.github/workflows/python-app-release.yml` | Python app release: wheel/sdist + SBOM + GitHub Release + optional GHCR image (no PyPI) | `contents: write`, `packages: write` | — |
 | web-ci | `.github/workflows/web-ci.yml` | Node.js typecheck, lint, test, build | `contents: read` | — |
 | web-deploy | `.github/workflows/web-deploy.yml` | Node.js build + deploy to GitHub Pages | `contents: read` (build job), `pages: write`, `id-token: write` (deploy job) | — |
 | web-security | `.github/workflows/web-security.yml` | CodeQL SAST + OSV scan + SBOM for JS/TS | `contents: read`, `security-events: write`, `actions: read` | — |

@@ -1,0 +1,102 @@
+name: python-app-release
+# Release workflow for Python *applications* (not PyPI libraries): builds the
+# wheel/sdist + SBOM, publishes a GitHub Release with those assets, and
+# (optionally) builds and pushes a Docker image to ghcr.io. Does NOT publish to
+# PyPI — use python-release.yml for that.
+on:
+  workflow_call:
+    inputs:
+      python-version: { type: string, default: "3.12" }
+      publish-docker:
+        description: Build and push a Docker image to ghcr.io.
+        type: boolean
+        default: true
+      docker-context:
+        type: string
+        default: "."
+permissions:
+  contents: read
+jobs:
+  # ── Build wheel/sdist + SBOM (gates the release on lint/test) ────────────────
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: fjacquet/ci/actions/setup-uv@v1 # nosemgrep: github-actions.security.third-party-action-not-pinned-to-commit-sha
+        with:
+          python-version: ${{ inputs.python-version }}
+      - run: make install
+      - run: make ci
+      - run: make sbom
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python-dist
+          path: dist/
+          retention-days: 1
+
+  # ── GitHub Release (wheel + sdist + SBOM) ────────────────────────────────────
+  github-release:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: python-dist
+          path: dist/
+      - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        with:
+          generate_release_notes: true
+          files: dist/**
+
+  # ── Docker → ghcr.io ─────────────────────────────────────────────────────────
+  docker:
+    if: ${{ inputs.publish-docker }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: ${{ inputs.docker-context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
