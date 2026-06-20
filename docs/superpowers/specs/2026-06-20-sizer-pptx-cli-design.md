@@ -63,21 +63,36 @@ well-bounded improvement, not a rewrite.
 |---|---|---|---|---|
 | **ppdm-report** | xlsx | `buildPptx(model, theme)` — takes `'light'`/`'dark'` | hoist `ExportModel` assembly out of `useExport.ts` | native `LIGHT`/`DARK` palettes |
 | **vsizer** | xlsx (RVTools/LiveOptics) | `buildPptx(input): ArrayBuffer` | hoist `BuildPptxInput` assembly out of `useExport.ts` | single light theme (`theme.ts`) |
-| **presizion** | xlsx | `exportPptx()` (calls `pptx.writeFile`) | split into `assemble` + `buildPptx(): ArrayBuffer`; CLI writes the file | single light theme |
+| **presizion** | xlsx | `exportPptx(cluster, scenarios, results, breakdowns, charts, …)` calls `pptx.writeFile` | split into `assemble` + `buildPptx(): ArrayBuffer`; CLI writes the file | single light theme |
 | **vatlas** | xlsx | worker → `buildPptx(view, trends, strings, locale, …)` | call `buildExportView` + `buildChartBundle` + `buildPptx` directly, bypassing `export.worker.ts` | has theme arg |
 
-### vatlas feasibility risk — chart rasterization (SPIKE)
+### Status (2026-06-20)
 
-`src/engines/export/chartBundle.ts` rasterizes charts to images; in headless Node there is no
-`<canvas>`/DOM. Before committing vatlas's CLI, run a short **spike** into how
-`buildChartBundle` rasterizes:
-- **Offscreen-canvas / Node-capable renderer** → add `@napi-rs/canvas` (or `node-canvas`) and
-  the native CLI works.
-- **Captured from already-rendered DOM** → vatlas can't go fully native; defer it (Playwright
-  fallback, like 360gantt) or ship its decks without those raster charts.
+- **vsizer** — DONE, merged (vsizer PR #41). `vsizer-pptx` CLI.
+- **ppdm-report** — DONE, merged (ppdm-report PR #15). `ppdm-report-pptx` CLI.
+- **presizion, vatlas** — DEFERRED. Both embed **chart images rasterized from a live rendered
+  chart instance**, which a headless Node process can't capture. To be tackled together once a
+  shared headless-chart-rendering approach is chosen.
 
-**Sequencing:** build the three clean apps first; vatlas's CLI is gated on the spike outcome
-and must not block them.
+### presizion + vatlas — chart rasterization (SHARED SPIKE)
+
+Both decks include per-scenario chart PNGs produced from rendered charts:
+- **presizion** — `exportPptx` takes `charts: Record<string, ChartCapture | null>` where
+  `ChartCapture = { dataUrl, width, height }` is produced by `instanceToPng(echartsInstance)` →
+  `canvas.toDataURL('image/png')` (a live ECharts instance in the DOM). `exportPptx` **degrades
+  gracefully** — chart slides are added only when captures are present — so a headless CLI can
+  ship the full deck **minus** the capacity/min-nodes chart images today.
+- **vatlas** — `src/engines/export/chartBundle.ts` rasterizes charts to images via the export worker.
+
+Decision fork for each (the user's call when resumed):
+- **Chart-less deck now** → fully native CLI, tables/numbers intact, visual charts absent
+  (works today for presizion; verify for vatlas).
+- **Headless chart render (spike)** → ECharts supports server-side rendering; add
+  `@napi-rs/canvas`/`node-canvas` (or ECharts SSR) to produce the PNGs in Node for a full-parity
+  deck. Do it once and reuse across both apps.
+
+**Sequencing:** the two clean apps (vsizer, ppdm-report) shipped first; presizion + vatlas are
+gated on this shared chart-rendering decision and do not block anything.
 
 ## CLI interface (identical across the four)
 
