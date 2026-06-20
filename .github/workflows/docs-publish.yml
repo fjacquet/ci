@@ -29,6 +29,10 @@ jobs:
           python-version: ${{ inputs.python-version }}
   deploy:
     needs: build
+    # Only deploy to GitHub Pages from a branch push (e.g. main). On pull_request
+    # the github-pages environment protection rejects the deploy, so the build job
+    # still validates docs but we skip the doomed deploy attempt.
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment:
