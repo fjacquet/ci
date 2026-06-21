@@ -39,6 +39,13 @@ Must expose the canonical Makefile target set from [`templates/Makefile.go`](tem
 
 The `tools` target installs `golangci-lint`, `govulncheck`, and `goreleaser` via `go install`.
 
+Copy the four caller workflows from [`templates/workflows/`](templates/workflows/) into the
+consumer's `.github/workflows/` — `ci.yml`, `security.yml`, `release.yml`, `docs.yml`. They are
+thin callers of the `go-*` / `docs-publish` reusable workflows above; keep them thin (no inlined
+build steps). The consumer still owns `.goreleaser.yaml`, `Dockerfile.goreleaser`, the MkDocs
+site, and a `gomod` + `docker` Dependabot config — but **not** a `github-actions` Dependabot
+ecosystem, since the pinned actions now live in this repo.
+
 ### Python repos
 
 Must expose the canonical Makefile target set from [`templates/Makefile.python`](templates/Makefile.python).
