@@ -112,12 +112,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip" \
-            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz" \
-            sbom.cyclonedx.json \
-            SHA256SUMS \
-            --generate-notes
+          files=(
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.zip"
+            "${ARCHIVE_NAME}-${GITHUB_REF_NAME}.tar.gz"
+            sbom.cyclonedx.json
+            SHA256SUMS
+          )
+          # Upsert: a release may already exist (manual creation, or a re-run of
+          # this workflow). `gh release create` is not idempotent, so create only
+          # when absent and otherwise upload assets with --clobber.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" --generate-notes
+          fi
 
   # ── npm → GitHub Packages ────────────────────────────────────────────────────
   npm-publish:
