@@ -14,4 +14,8 @@ runs:
       with:
         go-version: ${{ inputs.go-version }}
         go-version-file: go.mod
+        # Always resolve the newest patch release of the target minor so
+        # govulncheck does not flag stdlib CVEs fixed in a later patch
+        # (e.g. go1.25.0 -> go1.25.11 for GO-2026-5039/5037/4971/...).
+        check-latest: true
         cache: ${{ inputs.cache }}
