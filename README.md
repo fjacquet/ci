@@ -26,7 +26,7 @@ Central repository of reusable GitHub Actions workflows and composite actions fo
 | python-release | `.github/workflows/python-release.yml` | uv build + PyPI trusted publishing | `contents: read`, `id-token: write` | — |
 | python-app-release | `.github/workflows/python-app-release.yml` | Python app release: wheel/sdist + SBOM + GitHub Release + optional GHCR image (no PyPI) | `contents: write`, `packages: write` | — |
 | web-ci | `.github/workflows/web-ci.yml` | Node.js typecheck, lint, test, build | `contents: read` | — |
-| web-deploy | `.github/workflows/web-deploy.yml` | Node.js build + deploy to GitHub Pages | `contents: read` (build job), `pages: write`, `id-token: write` (deploy job) | — |
+| web-deploy | `.github/workflows/web-deploy.yml` | Node.js build + deploy to GitHub Pages (`build-script` selects the npm script) | `contents: read` (build job), `pages: write`, `id-token: write` (deploy job) | — |
 | web-security | `.github/workflows/web-security.yml` | CodeQL SAST + OSV scan + SBOM for JS/TS | `contents: read`, `security-events: write`, `actions: read` | — |
 | npm-release | `.github/workflows/npm-release.yml` | npm publish to npmjs.org via trusted publishing (OIDC) + provenance + GitHub Release | `contents: write`, `id-token: write` | — |
 | docs-publish | `.github/workflows/docs-publish.yml` | MkDocs build + deploy to GitHub Pages | `contents: read` (build job), `pages: write`, `id-token: write` (deploy job) | — |
