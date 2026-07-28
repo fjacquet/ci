@@ -28,6 +28,7 @@ Central repository of reusable GitHub Actions workflows and composite actions fo
 | web-ci | `.github/workflows/web-ci.yml` | Node.js typecheck, lint, test, build | `contents: read` | — |
 | web-deploy | `.github/workflows/web-deploy.yml` | Node.js build + deploy to GitHub Pages | `contents: read` (build job), `pages: write`, `id-token: write` (deploy job) | — |
 | web-security | `.github/workflows/web-security.yml` | CodeQL SAST + OSV scan + SBOM for JS/TS | `contents: read`, `security-events: write`, `actions: read` | — |
+| npm-release | `.github/workflows/npm-release.yml` | npm publish to npmjs.org via trusted publishing (OIDC) + provenance + GitHub Release | `contents: write`, `id-token: write` | — |
 | docs-publish | `.github/workflows/docs-publish.yml` | MkDocs build + deploy to GitHub Pages | `contents: read` (build job), `pages: write`, `id-token: write` (deploy job) | — |
 
 ## Consumer requirements
@@ -54,6 +55,24 @@ Dev dependencies must include `cyclonedx-py` (for `make sbom`) and `mkdocs-mater
 ### Frontend (web) repos
 
 Stay npm-native — no Makefile required. Scripts `typecheck`, `lint`, `test:run`, and `build` must be defined in `package.json`.
+
+### Published npm packages
+
+`npm-release` publishes to npmjs.org with **trusted publishing** — there is no `NPM_TOKEN` anywhere.
+Authentication is an OIDC exchange, and npm generates a provenance attestation automatically.
+
+Two things are easy to get wrong:
+
+- **The trusted publisher on npmjs.com must name the *caller* workflow file** (e.g. `release.yml` in
+  your package repo), not `npm-release.yml`. When `workflow_call` is involved, npm validates the
+  calling workflow, not the one that actually runs `npm publish`.
+- **`id-token: write` must be declared in the caller too**, not only here. The parent workflow has to
+  be allowed to mint the OIDC token in the first place.
+
+The caller must also set an `environment` (default `npm`) that exists in the repo settings, and
+`package.json` needs a `repository` field matching the GitHub URL. The workflow refuses to publish
+when the git tag does not match `v<package.json version>`, so a mismatched tag fails loudly instead
+of burning a version number on the registry.
 
 ## Usage example
 
