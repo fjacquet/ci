@@ -28,24 +28,24 @@
 
 | Path | Action | Purpose |
 |------|--------|---------|
-| `/Users/fjacquet/Projects/ci/actions/mkdocs-publish/action.yml` | Modify | Add the `Derive source-link footer` step before `make docs`; add a `version` composite output. |
-| `/Users/fjacquet/Projects/ci/.github/workflows/docs-publish.yml` | Verify only (no edit expected) | Confirm nothing blocks a tag-triggered run; add a clarifying comment only if the audit in Task 2 finds one. |
-| `/Users/fjacquet/Projects/ci/templates/workflows/docs.yml` | Modify | Trigger the canonical consumer caller on `v*` tag pushes so a release refreshes the footer immediately; drop the `paths:` filter that would suppress it. |
-| `/Users/fjacquet/Projects/ci/README.md` | Modify | Publish the consumer contract: env var name, exact shape, the one-line `mkdocs.yml` change, fallback behaviour. |
-| `/Users/fjacquet/Projects/ci/docs/superpowers/plans/2026-08-01-docs-version-link.md` | Create (this file) | The plan. |
+| `actions/mkdocs-publish/action.yml` | Modify | Add the `Derive source-link footer` step before `make docs`; add a `version` composite output. |
+| `.github/workflows/docs-publish.yml` | Verify only (no edit expected) | Confirm nothing blocks a tag-triggered run; add a clarifying comment only if the audit in Task 2 finds one. |
+| `templates/workflows/docs.yml` | Modify | Trigger the canonical consumer caller on `v*` tag pushes so a release refreshes the footer immediately; drop the `paths:` filter that would suppress it. |
+| `README.md` | Modify | Publish the consumer contract: env var name, exact shape, the one-line `mkdocs.yml` change, fallback behaviour. |
+| `docs/superpowers/plans/2026-08-01-docs-version-link.md` | Create (this file) | The plan. |
 
 ---
 
 ### Task 1: Derive and export `SITE_FOOTER` in the composite action
 
 **Files:**
-- Modify: `/Users/fjacquet/Projects/ci/actions/mkdocs-publish/action.yml`
+- Modify: `actions/mkdocs-publish/action.yml`
 
 **Interfaces:**
 - **Consumes:** `GITHUB_REF_TYPE`, `GITHUB_REF_NAME`, `GITHUB_SERVER_URL`, `GITHUB_REPOSITORY`, `GITHUB_ENV`, `GITHUB_OUTPUT` (all runner-provided); a git checkout with `fetch-depth: 0` in `GITHUB_WORKSPACE`.
 - **Produces:** environment variable `SITE_FOOTER` (a complete HTML fragment, single line) visible to every later step in the job, including `make docs`; composite action output `version` (the bare resolved version string, no HTML).
 
-- [ ] **Step 1: Read the current action file.** Open `/Users/fjacquet/Projects/ci/actions/mkdocs-publish/action.yml`. Confirm the step order is: `setup-python` → `setup-uv` → `Sync docs dependencies` → `Build docs` (`make docs`) → `configure-pages` → `upload-pages-artifact`. The new step goes **between `Sync docs dependencies` and `Build docs`** — after the toolchain is ready, before anything reads the env.
+- [ ] **Step 1: Read the current action file.** Open `actions/mkdocs-publish/action.yml`. Confirm the step order is: `setup-python` → `setup-uv` → `Sync docs dependencies` → `Build docs` (`make docs`) → `configure-pages` → `upload-pages-artifact`. The new step goes **between `Sync docs dependencies` and `Build docs`** — after the toolchain is ready, before anything reads the env.
 
 - [ ] **Step 2: Add the derivation step.** Insert the following block immediately before the `- name: Build docs` step (indentation: the `-` sits at 4 spaces, matching its siblings).
 
@@ -90,11 +90,12 @@
         printf 'docs source link: %s\n' "${footer}"
 ```
 
-  Notes for the implementer, so nothing here gets "simplified" away:
-  - `${GITHUB_REPOSITORY}` is `owner/repo` and cannot contain HTML-significant characters, so it needs no escaping either.
-  - The sanitiser makes HTML escaping unnecessary **and** makes the heredoc delimiter unspoofable (the value provably contains no newline). Keep both — the random delimiter is the documented-correct form for `$GITHUB_ENV` and costs nothing.
-  - `case` bracket note: the trailing `-` in `[!A-Za-z0-9._/-]` is literal because it is last. Do not reorder.
-  - `openssl` ships on `ubuntu-24.04`. Do not swap it for `$RANDOM`.
+Notes for the implementer, so nothing here gets "simplified" away:
+
+- `${GITHUB_REPOSITORY}` is `owner/repo` and cannot contain HTML-significant characters, so it needs no escaping either.
+- The sanitiser makes HTML escaping unnecessary **and** makes the heredoc delimiter unspoofable (the value provably contains no newline). Keep both — the random delimiter is the documented-correct form for `$GITHUB_ENV` and costs nothing.
+- `case` bracket note: the trailing `-` in `[!A-Za-z0-9._/-]` is literal because it is last. Do not reorder.
+- `openssl` ships on `ubuntu-24.04`; the derivation step falls back to `/dev/urandom` and then `$RANDOM` if it is absent — see Task 1 Step 2's updated delimiter logic.
 
 - [ ] **Step 3: Expose the resolved version as a composite output.** Add an `outputs:` block to the action, after `inputs:` and before `runs:`. This is purely additive — existing callers that ignore it are unaffected.
 
@@ -110,7 +111,7 @@ outputs:
 - [ ] **Step 5: Lint the action.** Run from the repo root:
 
 ```bash
-cd /Users/fjacquet/Projects/ci && actionlint -color && uvx zizmor --format=github . && pinact run --check --exclude '^fjacquet/'
+actionlint -color && uvx zizmor --format=github . && pinact run --check --exclude '^fjacquet/'
 ```
 
   All three must exit 0. If `zizmor` flags the new step, do **not** add a suppression — restructure the step until it passes.
@@ -120,7 +121,7 @@ cd /Users/fjacquet/Projects/ci && actionlint -color && uvx zizmor --format=githu
 ### Task 2: Audit the reusable workflow for tag-triggered runs
 
 **Files:**
-- Verify: `/Users/fjacquet/Projects/ci/.github/workflows/docs-publish.yml` (expected outcome: **no change**)
+- Verify: `.github/workflows/docs-publish.yml` (expected outcome: **no change**)
 
 **Interfaces:**
 - **Consumes:** the caller's trigger event.
@@ -141,7 +142,7 @@ cd /Users/fjacquet/Projects/ci && actionlint -color && uvx zizmor --format=githu
 ### Task 3: Make the canonical consumer caller template react to tags
 
 **Files:**
-- Modify: `/Users/fjacquet/Projects/ci/templates/workflows/docs.yml`
+- Modify: `templates/workflows/docs.yml`
 
 **Interfaces:**
 - **Consumes:** nothing new.
@@ -149,7 +150,7 @@ cd /Users/fjacquet/Projects/ci && actionlint -color && uvx zizmor --format=githu
 
 - [ ] **Step 1: Understand why `paths:` has to go.** A workflow cannot declare two `push:` keys, and when `branches`/`tags` and `paths` are combined, GitHub requires **both** filters to match. For a tag push the changed-file set is evaluated against the push's before-ref, which for a fresh tag is unreliable — a `paths: ["docs/**", "mkdocs.yml"]` filter will usually suppress the tag build entirely, which is exactly the build that carries the new version. The template therefore drops `paths:` and gains `tags:`. Cost: docs rebuild on every `main` push. That is a ~2-minute job on `ubuntu-24.04` and the Pages concurrency group already serialises it.
 
-- [ ] **Step 2: Replace the `on:` block.** In `/Users/fjacquet/Projects/ci/templates/workflows/docs.yml`, replace:
+- [ ] **Step 2: Replace the `on:` block.** In `templates/workflows/docs.yml`, replace:
 
 ```yaml
 on:
@@ -189,22 +190,22 @@ on:
 # workflow), not a branch.
 ```
 
-- [ ] **Step 4: Lint.** `cd /Users/fjacquet/Projects/ci && actionlint -color` — the templates directory is covered by the self-check.
+- [ ] **Step 4: Lint.** `actionlint -color` — the templates directory is covered by the self-check.
 
 ---
 
 ### Task 4: Publish the consumer contract in README.md
 
 **Files:**
-- Modify: `/Users/fjacquet/Projects/ci/README.md`
+- Modify: `README.md`
 
 **Interfaces:**
 - **Consumes:** the behaviour built in Task 1.
 - **Produces:** the normative, quotable contract the consumer-side plan implements against.
 
-- [ ] **Step 1: Add a contract section.** Insert the following after the `### Frontend (web) repos` subsection and before `### Published npm packages` in `/Users/fjacquet/Projects/ci/README.md`:
+- [ ] **Step 1: Add a contract section.** Insert the following after the `### Frontend (web) repos` subsection and before `### Published npm packages` in `README.md`:
 
-```markdown
+````markdown
 ### Docs sites: the version source link
 
 `docs-publish` exports one environment variable to `make docs`:
@@ -240,7 +241,7 @@ Two related rules for consumer `mkdocs.yml`:
 
 Adopting this is optional per repo: a consumer that has not added the `copyright:` line
 builds exactly as before.
-```
+````
 
 - [ ] **Step 2: Cross-reference from the workflow table.** In the `## Workflows` table, change the `docs-publish` Purpose cell from `MkDocs build + deploy to GitHub Pages` to `MkDocs build + deploy to GitHub Pages (exports `SITE_FOOTER`, see [Docs sites: the version source link](#docs-sites-the-version-source-link))`.
 
@@ -281,14 +282,19 @@ grep -o '<a href="https://github.com/fjacquet/obs_exporter/tree/v3.4.0"[^>]*>[^<
 
   Expected: `<a href="https://github.com/fjacquet/obs_exporter/tree/v3.4.0" rel="noopener">fjacquet/obs_exporter v3.4.0</a>`. If it prints nothing, the mechanism is broken — stop and debug before touching anything else.
 
-- [ ] **Step 3: Prove backward compatibility (unset variable).** Must exit 0 and print no anchor:
+- [ ] **Step 3: Prove backward compatibility (unset variable).** Must exit 0 and the anchor must be **absent** — this command itself fails (non-zero) if the anchor is unexpectedly present, rather than merely printing a grep count:
 
 ```bash
-cd /tmp/footer-check && env -u SITE_FOOTER uvx --with mkdocs-material --with pymdown-extensions mkdocs build --strict --site-dir site \
-  && grep -c 'tree/v3.4.0' site/index.html; echo "grep exit: $? (1 = absent, as expected)"
+cd /tmp/footer-check
+env -u SITE_FOOTER uvx --with mkdocs-material --with pymdown-extensions mkdocs build --strict --site-dir site
+if grep -q 'tree/v3.4.0' site/index.html; then
+  echo "FAIL: anchor present with SITE_FOOTER unset — backward compatibility broken" >&2
+  exit 1
+fi
+echo "OK: no anchor present with SITE_FOOTER unset"
 ```
 
-- [ ] **Step 4: Unit-test the derivation logic against the four cases.** Extract the script body from Task 1 Step 2 into `/tmp/footer-check/derive.sh` (drop the YAML wrapper, keep the bash verbatim, add `set -eo pipefail` at the top since `shell: bash` supplies it in CI), then run it against a scratch git repo:
+- [ ] **Step 4: Unit-test the derivation logic against five cases, asserting each one.** Extract the script body from Task 1 Step 2 into `/tmp/footer-check/derive.sh` (drop the YAML wrapper, keep the bash verbatim — including the `openssl` → `/dev/urandom` → `$RANDOM` delimiter fallback chain — and add `set -eo pipefail` at the top since `shell: bash` supplies it in CI), then run it against a scratch git repo. Each case below must assert its expected `version=` output and non-zero exits must themselves fail the script (no bare `cat` that only prints and moves on):
 
 ```bash
 rm -rf /tmp/footer-repo && mkdir /tmp/footer-repo && cd /tmp/footer-repo
@@ -296,23 +302,77 @@ git init -q && git commit -q --allow-empty -m init
 export GITHUB_SERVER_URL=https://github.com GITHUB_REPOSITORY=fjacquet/obs_exporter
 export GITHUB_ENV=/tmp/footer-repo/env GITHUB_OUTPUT=/tmp/footer-repo/out
 
+assert_version() {
+  # $1 = case label, $2 = regex the captured `version=` output must match
+  actual="$(grep '^version=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)"
+  if ! printf '%s' "${actual}" | grep -qE "$2"; then
+    echo "FAIL case $1: version='${actual}' does not match /$2/" >&2
+    exit 1
+  fi
+  echo "OK case $1: version='${actual}'"
+}
+
 # Case A: tagless repo, branch ref -> short SHA, must not fail
-: > "$GITHUB_ENV"; GITHUB_REF_TYPE=branch GITHUB_REF_NAME=main bash /tmp/footer-check/derive.sh; cat "$GITHUB_ENV"
+: > "$GITHUB_ENV"; : > "$GITHUB_OUTPUT"
+GITHUB_REF_TYPE=branch GITHUB_REF_NAME=main bash /tmp/footer-check/derive.sh || { echo "FAIL case A: derive.sh exited non-zero" >&2; exit 1; }
+assert_version A '^[0-9a-f]{7}$'
 
 # Case B: nearest tag from a branch ref -> v1.2.0
 git tag -a v1.2.0 -m v1.2.0 && git commit -q --allow-empty -m next
-: > "$GITHUB_ENV"; GITHUB_REF_TYPE=branch GITHUB_REF_NAME=main bash /tmp/footer-check/derive.sh; cat "$GITHUB_ENV"
+: > "$GITHUB_ENV"; : > "$GITHUB_OUTPUT"
+GITHUB_REF_TYPE=branch GITHUB_REF_NAME=main bash /tmp/footer-check/derive.sh || { echo "FAIL case B: derive.sh exited non-zero" >&2; exit 1; }
+assert_version B '^v1\.2\.0$'
 
 # Case C: tag ref wins over describe -> v9.9.9
-: > "$GITHUB_ENV"; GITHUB_REF_TYPE=tag GITHUB_REF_NAME=v9.9.9 bash /tmp/footer-check/derive.sh; cat "$GITHUB_ENV"
+: > "$GITHUB_ENV"; : > "$GITHUB_OUTPUT"
+GITHUB_REF_TYPE=tag GITHUB_REF_NAME=v9.9.9 bash /tmp/footer-check/derive.sh || { echo "FAIL case C: derive.sh exited non-zero" >&2; exit 1; }
+assert_version C '^v9\.9\.9$'
 
 # Case D: hostile tag name -> falls back to short SHA, emits no injected markup
-: > "$GITHUB_ENV"; GITHUB_REF_TYPE=tag GITHUB_REF_NAME='v1"><script>alert(1)</script>' bash /tmp/footer-check/derive.sh; cat "$GITHUB_ENV"
+: > "$GITHUB_ENV"; : > "$GITHUB_OUTPUT"
+GITHUB_REF_TYPE=tag GITHUB_REF_NAME='v1"><script>alert(1)</script>' bash /tmp/footer-check/derive.sh || { echo "FAIL case D: derive.sh exited non-zero" >&2; exit 1; }
+assert_version D '^[0-9a-f]{7}$'
+if grep -q '<script' "$GITHUB_ENV"; then
+  echo "FAIL case D: <script> markup leaked into GITHUB_ENV" >&2
+  exit 1
+fi
+echo "OK case D: no <script> markup in GITHUB_ENV"
+
+# Case E: delimiter-collision — a tag that is itself a valid, allowlisted version string but
+# contains the literal delimiter prefix embedded in it. The sanitiser's charset (A-Za-z0-9._/-)
+# permits underscores, so this is NOT rejected by sanitisation; it must instead be proven safe
+# by construction — the value is always embedded inside "Source: <a href=...>...</a>" text, so
+# it can never appear as a standalone line matching the heredoc delimiter and closing it early.
+: > "$GITHUB_ENV"; : > "$GITHUB_OUTPUT"
+GITHUB_REF_TYPE=tag GITHUB_REF_NAME='SITE_FOOTER_EOF_deadbeef' bash /tmp/footer-check/derive.sh || { echo "FAIL case E: derive.sh exited non-zero" >&2; exit 1; }
+assert_version E '^SITE_FOOTER_EOF_deadbeef$'
+# The env file must still be exactly 3 lines added for SITE_FOOTER: an opening heredoc marker,
+# one content line, and a closing marker distinct from the opening one — i.e. the embedded
+# delimiter-like substring did not fracture the heredoc into extra/short lines.
+env_lines="$(grep -c . "$GITHUB_ENV")"
+if [ "${env_lines}" -ne 3 ]; then
+  echo "FAIL case E: expected exactly 3 non-empty lines in GITHUB_ENV, got ${env_lines}" >&2
+  exit 1
+fi
+echo "OK case E: embedded delimiter-prefix tag did not break the heredoc"
 ```
 
-  Expected: A and D produce `tree/<7-hex-sha>`; B produces `tree/v1.2.0`; C produces `tree/v9.9.9`; **no run exits non-zero**, and D's output contains no `<script`.
+  Every case above is self-asserting: a failed assertion or a non-zero `derive.sh` exit stops the script with `exit 1`, not a print-and-continue. If this block runs to completion, all five cases held.
 
-- [ ] **Step 5: Feed case D's output back through mkdocs.** Take the exact `SITE_FOOTER` line case D wrote to `$GITHUB_ENV` (the middle line, between the delimiters), export it, rebuild `/tmp/footer-check`, and confirm `grep -c '<script' site/index.html` returns 0. This closes the loop: sanitiser output is provably render-safe.
+- [ ] **Step 5: Feed case D's output back through mkdocs and assert render-safety.** Take the exact `SITE_FOOTER` line case D wrote to `$GITHUB_ENV` (the middle line, between the delimiters), export it, rebuild `/tmp/footer-check`, and fail if any `<script` markup reaches the rendered footer:
+
+```bash
+cd /tmp/footer-check
+site_footer_value="$(sed -n '2p' /tmp/footer-repo/env)"
+SITE_FOOTER="${site_footer_value}" uvx --with mkdocs-material --with pymdown-extensions mkdocs build --strict --site-dir site
+if grep -q '<script' <(grep -A1 'md-copyright' site/index.html); then
+  echo "FAIL: <script> markup reached the rendered copyright footer" >&2
+  exit 1
+fi
+echo "OK: sanitiser output is render-safe — no <script> in the rendered footer"
+```
+
+  This closes the loop: sanitiser output is provably render-safe, not merely observed to look safe.
 
 - [ ] **Step 6: Clean up.** `rm -rf /tmp/footer-check /tmp/footer-repo`.
 
@@ -331,7 +391,6 @@ git tag -a v1.2.0 -m v1.2.0 && git commit -q --allow-empty -m next
 - [ ] **Step 2: Branch, commit, push.**
 
 ```bash
-cd /Users/fjacquet/Projects/ci
 git switch -c feat/docs-version-source-link
 git add actions/mkdocs-publish/action.yml templates/workflows/docs.yml README.md docs/superpowers/plans/2026-08-01-docs-version-link.md
 git commit -m "feat(mkdocs-publish): export SITE_FOOTER with a version-pinned source link"
@@ -343,7 +402,6 @@ git push -u origin feat/docs-version-source-link
 - [ ] **Step 4: Merge, then tag.**
 
 ```bash
-cd /Users/fjacquet/Projects/ci
 gh pr merge --squash --delete-branch
 git switch main && git pull --ff-only
 git tag -a v1.3.0 -m "v1.3.0 — docs sites carry a version-pinned source link"
