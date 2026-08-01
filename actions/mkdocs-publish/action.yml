@@ -49,7 +49,18 @@ runs:
         footer="Source: <a href=\"${url}\" rel=\"noopener\">${GITHUB_REPOSITORY} ${version}</a>"
 
         # 4. Write with a random-delimiter heredoc (the GITHUB_ENV-safe form for any value).
-        delim="SITE_FOOTER_EOF_$(openssl rand -hex 16)"
+        #    The randomness is a security control, not cosmetics: the footer value derives
+        #    from a git tag, which is attacker-influenceable. A guessable delimiter would let
+        #    a crafted tag close the heredoc early and inject arbitrary variables into
+        #    GITHUB_ENV. Prefer openssl; fall back to /dev/urandom; fall back to $RANDOM
+        #    composed several times with the PID mixed in. Never fail the step for this.
+        if command -v openssl >/dev/null 2>&1; then
+          rand="$(openssl rand -hex 16)"
+        elif [ -r /dev/urandom ]; then
+          rand="$(od -An -N16 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')"
+        fi
+        [ -n "${rand:-}" ] || rand="${RANDOM}${RANDOM}${RANDOM}${RANDOM}${RANDOM}$$"
+        delim="SITE_FOOTER_EOF_${rand}"
         {
           printf 'SITE_FOOTER<<%s\n' "${delim}"
           printf '%s\n' "${footer}"
