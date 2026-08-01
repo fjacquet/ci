@@ -1,7 +1,11 @@
 # Canonical caller for the docs site. Copy to a consumer repo as
 # `.github/workflows/docs.yml`. Builds the MkDocs Material site and deploys it to
 # GitHub Pages via fjacquet/ci. On pull_request the docs still build (validation)
-# but the deploy job self-skips — only a push to main publishes.
+# but the deploy job self-skips — only a push publishes.
+#
+# The `tags: ["v*"]` trigger exists so a release immediately republishes the site with
+# the new version in the footer source link (see SITE_FOOTER in README.md). Do not add a
+# `paths:` filter to the push trigger: combined path+tag filters suppress tag builds.
 #
 # Pages prerequisite: set the repo's Pages source to "GitHub Actions" (build_type
 # workflow), not a branch.
@@ -9,7 +13,7 @@ name: Docs
 on:
   push:
     branches: [main]
-    paths: ["docs/**", "mkdocs.yml"]
+    tags: ["v*"]
   pull_request:
     paths: ["docs/**", "mkdocs.yml"]
 permissions:
