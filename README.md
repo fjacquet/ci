@@ -62,7 +62,12 @@ Stay npm-native — no Makefile required. Scripts `typecheck`, `lint`, `test:run
 
 | Variable | Shape | Example |
 |----------|-------|---------|
-| `SITE_FOOTER` | A complete, single-line HTML fragment containing one anchor. Never empty. | `Source: <a href="https://github.com/fjacquet/obs_exporter/tree/v3.4.0" rel="noopener">fjacquet/obs_exporter v3.4.0</a>` |
+| `SITE_FOOTER` | A complete, single-line HTML fragment containing one anchor. Set by `docs-publish` CI runs; not set at all outside CI. | `Source: <a href="https://github.com/fjacquet/obs_exporter/tree/v3.4.0" rel="noopener">fjacquet/obs_exporter v3.4.0</a>` |
+
+Within a `docs-publish` CI run, `SITE_FOOTER` is never empty — the derivation always falls back
+at worst to the short commit SHA. Outside CI (local `mkdocs serve`, a bare `make docs` on a
+laptop) the variable is unset entirely, and that is expected and supported: MkDocs' `!ENV`
+default (`""`) renders an empty footer rather than failing the build.
 
 The link target is `<server_url>/<repository>/tree/<version>`, where `<version>` is, in order
 of preference: the pushed tag name, the nearest tag reachable from `HEAD`
@@ -82,9 +87,12 @@ tag supplies the default when the variable is unset — so local `mkdocs serve` 
 
 Two related rules for consumer `mkdocs.yml`:
 
-- **Delete any `extra.version:` key.** It renders nothing (mkdocs-material only shows a
-  version selector with `extra.version.provider: mike` plus a theme override directory)
-  and it goes stale silently. `SITE_FOOTER` replaces it.
+- **Delete a stale `extra.version:` key only if it has no `provider: mike`.** Without
+  `extra.version.provider: mike` plus a theme override directory, `extra.version` renders
+  nothing and just goes stale silently — that dead form is what `SITE_FOOTER` replaces. If a
+  repo *does* set `extra.version.provider: mike`, that is live versioning config (a real `mike`
+  deployment with an `overrides/` dir) and must be left alone — `SITE_FOOTER` is a separate,
+  additive mechanism, not a replacement for `mike`.
 - **A repo that already sets a literal `copyright:`** (e.g. `MIT Licensed`) must fold that
   text into the `!ENV` default, not keep a second key:
   `copyright: !ENV [SITE_FOOTER, "MIT Licensed"]`.
