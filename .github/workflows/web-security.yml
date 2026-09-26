@@ -6,6 +6,10 @@ on:
         description: Directory containing the app's package.json (for repos where the JS app is not at the repo root)
         type: string
         default: "."
+      upload-sarif:
+        description: Upload SARIF results to GitHub Code Scanning. Set to false for private repos without GHAS, where Code Scanning cannot be enabled; findings still fail the job instead.
+        type: boolean
+        default: true
 permissions:
   contents: read
 concurrency:
@@ -33,12 +37,25 @@ jobs:
       - uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         with:
           category: "/language:javascript-typescript"
+          output: codeql-results
+          upload: ${{ inputs.upload-sarif && 'always' || 'never' }}
+      - name: Fail on CodeQL findings (SARIF upload disabled)
+        if: ${{ !inputs.upload-sarif }}
+        run: |
+          count=$(jq -s '[.[].runs[].results[]] | length' codeql-results/*.sarif)
+          echo "CodeQL findings: $count"
+          if [ "$count" -gt 0 ]; then
+            echo "::error::CodeQL found $count result(s). Failing the job since SARIF upload to Code Scanning is disabled (upload-sarif=false)."
+            exit 1
+          fi
   osv-scan:
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
     permissions:
       contents: read
       security-events: write
       actions: read
+    with:
+      upload-sarif: ${{ inputs.upload-sarif }}
   sbom:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
