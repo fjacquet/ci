@@ -38,6 +38,8 @@ Central repository of reusable GitHub Actions workflows and composite actions fo
 Must expose the canonical Makefile target set from [`templates/Makefile.go`](templates/Makefile.go):
 `all`, `clean`, `install`, `tools`, `lint`, `format`, `test`, `build`, `vuln`, `sbom`, `security`, `docs`, `coverage-upload`, `release`, `ci`.
 
+The Python `vuln` target runs the `osv-scanner` binary (`brew install osv-scanner` locally; `python-security` installs a pinned, checksum-verified copy) and fails on findings. Waive in `osv-scanner.toml` with `ignoreUntil`.
+
 The `tools` target installs `golangci-lint`, `govulncheck`, and `goreleaser` via `go install`.
 
 Copy the four caller workflows from [`templates/workflows/`](templates/workflows/) into the
